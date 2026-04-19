@@ -15,13 +15,21 @@ integration suite runs only at merge time via GitHub Merge Queue
    - Uploads Linux x86_64 binary artifact for downstream integration testing.
    - Runs in both PR context (fast feedback for contributors) and merge_group
      context (against the tentative merge commit before queue auto-merges).
-2. **`ci-integration.yml`** - Tier 2, `merge_group` trigger only
+2. **`ci-integration.yml`** - Tier 2, `merge_group` trigger (with PR-event stub)
    - **Linux-only**. Builds binary inline, then runs smoke + integration +
      release-validation against the tentative merge commit.
    - Trust boundary is the write-access grant (only users with write can
      enqueue a PR). No environment approval gate.
    - Inlines the binary build instead of fetching from `ci.yml` to avoid
      cross-workflow artifact plumbing across triggers.
+   - **Skip-on-PR pattern**: also triggers on `pull_request` so that the
+     required check names (`Build (Linux)`, `Smoke Test (Linux)`,
+     `Integration Tests (Linux)`, `Release Validation (Linux)`) report on PR
+     head SHAs. Every job carries `if: github.event_name == 'merge_group'`,
+     so on PR events all jobs are skipped via `if:`. Skipped-via-`if:` jobs
+     report a `skipped` conclusion which GitHub branch protection treats as
+     success, satisfying the required-checks gate without spending runner
+     minutes. Real Tier 2 work happens only on `merge_group` events.
 3. **`build-release.yml`** - `push` to main, tags, schedule, `workflow_dispatch`
    - **Linux + Windows** run combined `build-and-test` (unit tests + binary build in one job).
    - **macOS Intel** uses `build-and-validate-macos-intel` (root node, runs own unit tests - no dependency on `build-and-test`). Builds the binary on every push for early regression feedback; integration + release-validation phases conditional on tag/schedule/dispatch.

@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - CI: adopt GitHub Merge Queue with tiered CI. `ci.yml` (Tier 1: unit tests + binary build) now runs on `pull_request` and `merge_group`. The integration + release-validation suite (Tier 2) moves to `merge_group`-only, replacing the previous `workflow_run` + environment-approval flow. PR branches no longer need manual updates against `main`, and the heavy integration suite runs once at merge time instead of on every PR push (#770)
+- CI: `ci-integration.yml` adopts the skip-on-PR pattern. Tier 2 jobs are now declared with `if: github.event_name == 'merge_group'` and the workflow also triggers on `pull_request`, so the required-status-check names (`Build (Linux)`, `Smoke Test (Linux)`, `Integration Tests (Linux)`, `Release Validation (Linux)`) report as skipped (treated as success by branch protection) on PR commits and run for real only inside the merge queue. This unblocks merge-queue gating without burning CI minutes on every PR push
 
 ### Fixed
 
