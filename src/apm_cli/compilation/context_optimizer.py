@@ -7,6 +7,7 @@ following the Minimal Context Principle.
 
 import builtins
 import fnmatch
+import logging
 import os
 import time
 from collections import defaultdict
@@ -15,6 +16,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 from functools import lru_cache
 import glob
+
+logger = logging.getLogger(__name__)
 
 from ..primitives.models import Instruction
 from ..output.models import (
@@ -153,7 +156,7 @@ class ContextOptimizer:
         
         # Only show timing in verbose mode with professional formatting
         if self._timing_enabled and hasattr(self, '_verbose') and self._verbose:
-            print(f"  {phase_name}: {duration*1000:.1f}ms")
+            logger.debug("  %s: %.1fms", phase_name, duration * 1000)
         return result
     
     def _cached_glob(self, pattern: str) -> List[str]:

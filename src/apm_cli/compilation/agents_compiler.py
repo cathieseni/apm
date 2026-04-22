@@ -727,7 +727,7 @@ class AgentsCompiler:
             TemplateData: Template data for generation.
         """
         # Build instructions content
-        instructions_content = build_conditional_sections(primitives.instructions)
+        instructions_content = build_conditional_sections(primitives.instructions, self.base_dir)
 
         # Metadata (version only; timestamp intentionally omitted for determinism)
         version = get_version()

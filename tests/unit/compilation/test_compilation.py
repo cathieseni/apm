@@ -57,7 +57,7 @@ class TestTemplateBuilder(unittest.TestCase):
             )
         ]
         
-        result = build_conditional_sections(instructions)
+        result = build_conditional_sections(instructions, Path("."))
         
         # Should group by pattern
         self.assertIn("## Files matching `**/*.py`", result)
@@ -68,7 +68,7 @@ class TestTemplateBuilder(unittest.TestCase):
 
     def test_build_conditional_sections_empty(self):
         """Test building conditional sections with no instructions."""
-        result = build_conditional_sections([])
+        result = build_conditional_sections([], Path("."))
         self.assertEqual(result, "")
 
 

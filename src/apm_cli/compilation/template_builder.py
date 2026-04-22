@@ -17,11 +17,14 @@ class TemplateData:
     chatmode_content: Optional[str] = None
     
 
-def build_conditional_sections(instructions: List[Instruction]) -> str:
+def build_conditional_sections(instructions: List[Instruction], base_dir: Path) -> str:
     """Build sections grouped by applyTo patterns.
     
     Args:
         instructions (List[Instruction]): List of instruction primitives.
+        base_dir (Path): Base directory used for deterministic relative-path
+            sorting and display.  Must be supplied by the caller; there is no
+            fallback to ``Path.cwd()``.
     
     Returns:
         str: Formatted conditional sections content.
@@ -39,14 +42,14 @@ def build_conditional_sections(instructions: List[Instruction]) -> str:
         sections.append("")
 
         # Combine content from all instructions for this pattern
-        for instruction in sorted(pattern_instructions, key=lambda i: portable_relpath(i.file_path, Path.cwd())):
+        for instruction in sorted(pattern_instructions, key=lambda i: portable_relpath(i.file_path, base_dir)):
             content = instruction.content.strip()
             if content:
                 # Add source file comment before the content
                 try:
                     # Try to get relative path for cleaner display
                     if instruction.file_path.is_absolute():
-                        relative_path = portable_relpath(instruction.file_path, Path.cwd())
+                        relative_path = portable_relpath(instruction.file_path, base_dir)
                     else:
                         relative_path = str(instruction.file_path)
                 except (ValueError, OSError):

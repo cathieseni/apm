@@ -879,5 +879,43 @@ class TestGlobCacheReuse:
             assert id(optimizer._glob_set_cache["**/*.ts"]) == cached_set_id
 
 
+class TestTimePhaseLoggerRouting:
+    """_time_phase must route timing output through the logger, not stdout."""
+
+    def test_timing_output_goes_to_logger_not_stdout(
+        self, tmp_path: Path, capsys, caplog
+    ) -> None:
+        """When timing and verbose are enabled, the phase duration must
+        appear in the DEBUG log and must NOT appear on stdout."""
+        optimizer = ContextOptimizer(str(tmp_path))
+        optimizer._timing_enabled = True
+        optimizer._verbose = True
+
+        with caplog.at_level("DEBUG", logger="apm_cli.compilation.context_optimizer"):
+            optimizer._time_phase("TestPhase", lambda: None)
+
+        captured = capsys.readouterr()
+        assert captured.out == "", "Timing output must not leak to stdout"
+        assert any(
+            "TestPhase" in record.message and "ms" in record.message
+            for record in caplog.records
+        ), "Timing output should appear in logger DEBUG records"
+
+    def test_timing_silent_when_not_verbose(self, tmp_path: Path, capsys, caplog) -> None:
+        """When timing is enabled but verbose is False, nothing is logged."""
+        optimizer = ContextOptimizer(str(tmp_path))
+        optimizer._timing_enabled = True
+        optimizer._verbose = False
+
+        with caplog.at_level("DEBUG", logger="apm_cli.compilation.context_optimizer"):
+            optimizer._time_phase("QuietPhase", lambda: 42)
+
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert not any(
+            "QuietPhase" in record.message for record in caplog.records
+        )
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
