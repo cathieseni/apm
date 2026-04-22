@@ -1358,9 +1358,9 @@ apm compile [OPTIONS]
 - `-v, --verbose` - Show detailed source attribution and optimizer analysis
 - `--local-only` - Ignore dependencies, compile only local primitives
 - `--clean` - Remove orphaned AGENTS.md files that are no longer generated
-- `--check` - Read-only drift verification. Compiles in-memory and compares against files on disk without writing. See [Drift verification](#drift-verification-check) below.
+- `--check` - Read-only drift verification. Compiles in-memory and compares against files on disk without writing. See the **Drift verification** section below.
 
-**Drift verification (`--check`):**
+**Drift verification (`--check`)**
 
 Use `--check` in CI to assert that committed generated outputs are in sync with their `.apm/` sources. The flag never writes to disk; it compiles in memory, diffs against the existing files, and exits with one of three codes:
 
@@ -1372,11 +1372,13 @@ Use `--check` in CI to assert that committed generated outputs are in sync with 
 
 Stdout is kept empty on exit `0` and `1` (reserved for a future `--json` report). The drift report is written to stderr and lists each drifted path plus whether the cause is content drift or a stale file.
 
-Example CI step:
+Example CI step (drift gate scoped to the outputs you commit):
 
 ```yaml
 - name: Verify generated outputs are in sync
-  run: apm compile --check
+  # Scope to the targets whose outputs are committed to the repo.
+  # Omit -t to check every generated output in the working tree.
+  run: apm compile -t copilot --check
 ```
 
 **Target Auto-Detection:**
