@@ -27,6 +27,7 @@ CATEGORY_SECURITY = "security"
 CATEGORY_POLICY = "policy"
 CATEGORY_AUTH = "auth"
 CATEGORY_INFO = "info"
+CATEGORY_DRIFT = "drift"
 
 _CATEGORY_ORDER = [
     CATEGORY_SECURITY,
@@ -36,6 +37,7 @@ _CATEGORY_ORDER = [
     CATEGORY_OVERWRITE,
     CATEGORY_WARNING,
     CATEGORY_ERROR,
+    CATEGORY_DRIFT,
     CATEGORY_INFO,
 ]
 
@@ -177,6 +179,24 @@ class DiagnosticCollector:
                 )
             )
 
+    def drift(self, path: str, detail: str = "") -> None:
+        """Record a content drift or stale file for ``apm compile --check``.
+
+        Args:
+            path: Relative or absolute path to the drifted/stale file.
+            detail: Use ``"stale"`` for files that exist on disk but have no
+                matching source primitives.  Any other value (default empty) is
+                treated as content drift.
+        """
+        with self._lock:
+            self._diagnostics.append(
+                Diagnostic(
+                    message=path,
+                    category=CATEGORY_DRIFT,
+                    detail=detail,
+                )
+            )
+
     # ------------------------------------------------------------------
     # Query helpers
     # ------------------------------------------------------------------
@@ -204,6 +224,11 @@ class DiagnosticCollector:
     def policy_count(self) -> int:
         """Return number of policy diagnostics."""
         return sum(1 for d in self._diagnostics if d.category == CATEGORY_POLICY)
+
+    @property
+    def drift_count(self) -> int:
+        """Return number of drift diagnostics (content + stale)."""
+        return sum(1 for d in self._diagnostics if d.category == CATEGORY_DRIFT)
 
     @property
     def has_critical_security(self) -> bool:

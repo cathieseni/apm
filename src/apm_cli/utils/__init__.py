@@ -19,6 +19,7 @@ from .diagnostics import (
     CATEGORY_OVERWRITE,
     CATEGORY_WARNING,
     CATEGORY_ERROR,
+    CATEGORY_DRIFT,
 )
 
 from .paths import portable_relpath
@@ -39,5 +40,6 @@ __all__ = [
     'CATEGORY_OVERWRITE',
     'CATEGORY_WARNING',
     'CATEGORY_ERROR',
+    'CATEGORY_DRIFT',
     'portable_relpath',
 ]

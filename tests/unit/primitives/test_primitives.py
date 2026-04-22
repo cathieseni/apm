@@ -73,7 +73,7 @@ class TestPrimitiveModels(unittest.TestCase):
         )
         self.assertEqual(instruction.validate(), [])
 
-        # Missing applyTo (instruction will apply globally)
+        # Empty applyTo — root-scoped instructions are now first-class (no warning).
         instruction_no_apply = Instruction(
             name="test",
             file_path=Path("test.instructions.md"),
@@ -82,8 +82,7 @@ class TestPrimitiveModels(unittest.TestCase):
             content="# Test content",
         )
         errors = instruction_no_apply.validate()
-        self.assertEqual(len(errors), 1)
-        self.assertIn("applyTo", errors[0])
+        self.assertEqual(len(errors), 0)
 
     def test_context_validation(self):
         """Test context validation."""
@@ -164,7 +163,9 @@ class TestPrimitiveModels(unittest.TestCase):
             content="",
         )
         errors = instruction.validate()
-        self.assertEqual(len(errors), 3)
+        # With root-scoped instructions now first-class, only 2 errors remain:
+        # missing description and empty content (no applyTo warning).
+        self.assertEqual(len(errors), 2)
 
     def test_skill_validation_valid(self):
         """Test valid Skill passes validation."""

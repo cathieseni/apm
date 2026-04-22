@@ -907,14 +907,18 @@ compilation:
 
 
 class TestCompileWarningOnMissingApplyTo:
-    """Tests that apm compile warns when an instruction is missing applyTo."""
+    """Tests that apm compile no longer warns for instructions missing applyTo.
+
+    Root-scoped instructions (no applyTo) are now first-class inputs and
+    should NOT trigger a validation warning.
+    """
 
     @pytest.fixture
     def runner(self):
         return CliRunner()
 
     @pytest.fixture
-    def project_with_bad_instruction(self):
+    def project_with_root_instruction(self):
         temp_dir = tempfile.mkdtemp()
         temp_path = Path(temp_dir)
 
@@ -926,41 +930,41 @@ class TestCompileWarningOnMissingApplyTo:
         (apm_dir / "good.instructions.md").write_text(
             "---\napplyTo: '**/*.py'\n---\nFollow PEP 8.\n"
         )
-        (apm_dir / "bad.instructions.md").write_text(
-            "---\ndescription: Missing applyTo\n---\nThis instruction has no scope.\n"
+        (apm_dir / "root.instructions.md").write_text(
+            "---\ndescription: Root-scoped\n---\nThis instruction has no scope.\n"
         )
 
         yield temp_path
         shutil.rmtree(temp_dir, ignore_errors=True)
 
-    def test_cli_warns_missing_apply_to_distributed(
-        self, runner, project_with_bad_instruction
+    def test_cli_no_apply_to_warning_distributed(
+        self, runner, project_with_root_instruction
     ):
-        """Test that apm compile --dry-run warns about missing applyTo in distributed mode."""
+        """Test that apm compile --dry-run does not warn about missing applyTo."""
         original_dir = os.getcwd()
         try:
-            os.chdir(project_with_bad_instruction)
+            os.chdir(project_with_root_instruction)
             result = runner.invoke(
                 cli, ["compile", "--target", "vscode", "--dry-run"]
             )
-            assert "applyTo" in result.output, (
-                f"Expected warning about missing 'applyTo' in CLI output, got:\n{result.output}"
+            assert "applyTo" not in result.output, (
+                f"Root-scoped instructions should not produce applyTo warnings, got:\n{result.output}"
             )
         finally:
             os.chdir(original_dir)
 
-    def test_cli_warns_missing_apply_to_claude(
-        self, runner, project_with_bad_instruction
+    def test_cli_no_apply_to_warning_claude(
+        self, runner, project_with_root_instruction
     ):
-        """Test that apm compile --target claude --dry-run warns about missing applyTo."""
+        """Test that apm compile --target claude --dry-run does not warn about missing applyTo."""
         original_dir = os.getcwd()
         try:
-            os.chdir(project_with_bad_instruction)
+            os.chdir(project_with_root_instruction)
             result = runner.invoke(
                 cli, ["compile", "--target", "claude", "--dry-run"]
             )
-            assert "applyTo" in result.output, (
-                f"Expected warning about missing 'applyTo' in CLI output, got:\n{result.output}"
+            assert "applyTo" not in result.output, (
+                f"Root-scoped instructions should not produce applyTo warnings, got:\n{result.output}"
             )
         finally:
             os.chdir(original_dir)

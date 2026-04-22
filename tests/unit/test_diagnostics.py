@@ -9,6 +9,7 @@ import pytest
 from apm_cli.utils.diagnostics import (
     CATEGORY_AUTH,
     CATEGORY_COLLISION,
+    CATEGORY_DRIFT,
     CATEGORY_ERROR,
     CATEGORY_INFO,
     CATEGORY_OVERWRITE,
@@ -577,3 +578,61 @@ class TestAuthCategory:
         auth_idx = next(i for i, t in enumerate(call_order) if "authentication" in t)
         coll_idx = next(i for i, t in enumerate(call_order) if "skipped" in t)
         assert auth_idx < coll_idx, "auth should render before collision"
+
+
+# -- Drift category ----------------------------------------------------------
+
+
+class TestDriftCategory:
+    def test_drift_records_diagnostic(self):
+        dc = DiagnosticCollector()
+        dc.drift("AGENTS.md")
+        assert dc.has_diagnostics is True
+        assert len(dc._diagnostics) == 1
+        d = dc._diagnostics[0]
+        assert d.category == CATEGORY_DRIFT
+        assert d.message == "AGENTS.md"
+        assert d.detail == ""
+
+    def test_drift_stale_records_detail(self):
+        dc = DiagnosticCollector()
+        dc.drift("AGENTS.md", detail="stale")
+        d = dc._diagnostics[0]
+        assert d.category == CATEGORY_DRIFT
+        assert d.detail == "stale"
+
+    def test_drift_count_zero_when_empty(self):
+        dc = DiagnosticCollector()
+        dc.warn("unrelated")
+        assert dc.drift_count == 0
+
+    def test_drift_count_returns_correct_count(self):
+        dc = DiagnosticCollector()
+        dc.drift("AGENTS.md")
+        dc.drift("CLAUDE.md", detail="stale")
+        dc.warn("not drift")
+        assert dc.drift_count == 2
+
+    @patch(f"{_MOCK_BASE}._get_console", return_value=None)
+    @patch(f"{_MOCK_BASE}._rich_echo")
+    @patch(f"{_MOCK_BASE}._rich_warning")
+    @patch(f"{_MOCK_BASE}._rich_info")
+    def test_render_summary_noop_for_drift_only(
+        self, mock_info, mock_warning, mock_echo, mock_console
+    ):
+        """render_summary() is a silent no-op for drift entries.
+
+        Drift rendering is handled by the CLI-layer _render_drift_report.
+        """
+        dc = DiagnosticCollector()
+        dc.drift("AGENTS.md")
+        dc.render_summary()
+        # The only echo calls should be the separator line, not drift-specific output.
+        all_texts = (
+            [str(c) for c in mock_echo.call_args_list]
+            + [str(c) for c in mock_warning.call_args_list]
+            + [str(c) for c in mock_info.call_args_list]
+        )
+        combined = " ".join(all_texts)
+        assert "AGENTS.md" not in combined
+        assert "drift" not in combined.lower()

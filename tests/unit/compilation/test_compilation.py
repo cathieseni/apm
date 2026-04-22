@@ -156,8 +156,12 @@ class TestAgentsCompiler(unittest.TestCase):
         errors = compiler.validate_primitives(primitives)
         self.assertEqual(len(errors), 0)
 
-    def test_validate_primitives_warns_on_missing_apply_to(self):
-        """Test that validate_primitives adds a warning when applyTo is missing."""
+    def test_validate_primitives_no_warning_on_empty_apply_to(self):
+        """Test that validate_primitives does NOT warn for empty applyTo.
+
+        Root-scoped instructions (no applyTo) are now first-class; the
+        compiler should not flag them.
+        """
         compiler = AgentsCompiler(str(self.temp_path))
 
         primitives = PrimitiveCollection()
@@ -173,10 +177,9 @@ class TestAgentsCompiler(unittest.TestCase):
 
         errors = compiler.validate_primitives(primitives)
         self.assertEqual(len(errors), 0)
-        self.assertTrue(len(compiler.warnings) > 0)
-        self.assertTrue(
+        self.assertFalse(
             any("applyTo" in w for w in compiler.warnings),
-            f"Expected a warning mentioning 'applyTo', got: {compiler.warnings}",
+            f"Root-scoped instructions should not produce applyTo warnings, got: {compiler.warnings}",
         )
 
     @patch('apm_cli.primitives.discovery.discover_primitives')
@@ -209,7 +212,11 @@ class TestAgentsCompiler(unittest.TestCase):
         self.assertIn("Use type hints.", result.content)
 
     def test_distributed_compile_includes_validation_warnings(self):
-        """Test that distributed compilation surfaces warnings for missing applyTo."""
+        """Test that distributed compilation does NOT warn for empty applyTo.
+
+        Root-scoped instructions (empty applyTo) are now first-class inputs;
+        they no longer trigger a validation warning.
+        """
         primitives = PrimitiveCollection()
 
         good_instruction = Instruction(
@@ -220,16 +227,16 @@ class TestAgentsCompiler(unittest.TestCase):
             content="Follow PEP 8.",
             author="test",
         )
-        bad_instruction = Instruction(
-            name="bad",
-            file_path=self.temp_path / "bad.instructions.md",
-            description="Missing applyTo",
+        root_instruction = Instruction(
+            name="root-scoped",
+            file_path=self.temp_path / "root-scoped.instructions.md",
+            description="Root-scoped instruction",
             apply_to="",
             content="This has no scope.",
             author="test",
         )
         primitives.add_primitive(good_instruction)
-        primitives.add_primitive(bad_instruction)
+        primitives.add_primitive(root_instruction)
 
         compiler = AgentsCompiler(str(self.temp_path))
         config = CompilationConfig(
@@ -238,24 +245,29 @@ class TestAgentsCompiler(unittest.TestCase):
 
         result = compiler.compile(config, primitives)
 
-        self.assertTrue(
+        self.assertFalse(
             any("applyTo" in w for w in result.warnings),
-            f"Expected a warning about missing 'applyTo', got: {result.warnings}",
+            f"Root-scoped instructions should not produce applyTo warnings, got: {result.warnings}",
         )
 
     def test_claude_md_compile_includes_validation_warnings(self):
-        """Test that CLAUDE.md compilation surfaces warnings for missing applyTo."""
+        """Test that CLAUDE.md compilation does NOT warn for empty applyTo.
+
+        Root-scoped instructions (empty applyTo) are now first-class inputs
+        to the copilot-instructions emitter; they no longer trigger a
+        validation warning.
+        """
         primitives = PrimitiveCollection()
 
-        bad_instruction = Instruction(
+        root_instruction = Instruction(
             name="no-scope",
             file_path=self.temp_path / "no-scope.instructions.md",
-            description="Missing applyTo",
+            description="Root-scoped instruction",
             apply_to="",
             content="This has no scope.",
             author="test",
         )
-        primitives.add_primitive(bad_instruction)
+        primitives.add_primitive(root_instruction)
 
         compiler = AgentsCompiler(str(self.temp_path))
         config = CompilationConfig(
@@ -264,9 +276,9 @@ class TestAgentsCompiler(unittest.TestCase):
 
         result = compiler.compile(config, primitives)
 
-        self.assertTrue(
+        self.assertFalse(
             any("applyTo" in w for w in result.warnings),
-            f"Expected a warning about missing 'applyTo', got: {result.warnings}",
+            f"Root-scoped instructions should not produce applyTo warnings, got: {result.warnings}",
         )
 
     def test_compile_agents_md_function(self):

@@ -281,6 +281,129 @@ class AgentsCompiler:
                 errors=self.errors.copy(),
                 stats={}
             )
+
+    def preview_all_outputs(self, config: CompilationConfig) -> Dict[Path, str]:
+        """Return a mapping of output path to expected content for ``--check``.
+
+        Runs the full compile pipeline in dry-run mode (in-memory, no writes)
+        and collects the per-file content map across all configured targets
+        (AGENTS.md, copilot-instructions, CLAUDE.md).
+
+        Args:
+            config: Compilation config.  Will be shallow-copied with
+                ``dry_run=True`` forced on; the caller's original config is
+                not mutated.
+
+        Returns:
+            ``{Path: str}`` keyed by resolved output path (relative to
+            ``self.base_dir``).  Empty dict if no outputs would be produced.
+        """
+        from dataclasses import replace
+
+        preview_config = replace(config, dry_run=True)
+
+        # Suppress all logger output during preview.
+        saved_logger = self._logger
+        self._logger = None
+
+        try:
+            result_map: Dict[Path, str] = {}
+
+            # Discover primitives (respecting local_only).
+            if preview_config.local_only:
+                primitives = discover_primitives(
+                    str(self.base_dir),
+                    exclude_patterns=preview_config.exclude,
+                )
+            else:
+                from ..primitives.discovery import discover_primitives_with_dependencies
+                primitives = discover_primitives_with_dependencies(
+                    str(self.base_dir),
+                    exclude_patterns=preview_config.exclude,
+                )
+
+            routing_target = (
+                "vscode"
+                if preview_config.target in _VSCODE_TARGET_ALIASES
+                else preview_config.target
+            )
+
+            # --- AGENTS.md (distributed or single-file) ---
+            if should_compile_agents_md(routing_target):
+                if (
+                    preview_config.strategy == "distributed"
+                    and not preview_config.single_agents
+                ):
+                    from .distributed_compiler import DistributedAgentsCompiler
+
+                    dist = DistributedAgentsCompiler(
+                        str(self.base_dir),
+                        exclude_patterns=preview_config.exclude,
+                    )
+                    dist_cfg = {
+                        "min_instructions_per_file": preview_config.min_instructions_per_file,
+                        "source_attribution": preview_config.source_attribution,
+                        "debug": False,
+                        "clean_orphaned": False,
+                        "dry_run": True,
+                    }
+                    dist_result = dist.compile_distributed(primitives, dist_cfg)
+                    if dist_result.success:
+                        for p, content in dist_result.content_map.items():
+                            try:
+                                rel = p.relative_to(self.base_dir.resolve())
+                            except ValueError:
+                                rel = p
+                            result_map[rel] = content
+                else:
+                    # Single-file fallback
+                    tdata = self._generate_template_data(primitives, preview_config)
+                    content = self.generate_output(tdata, preview_config)
+                    result_map[Path(preview_config.output_path)] = content
+
+            # --- copilot-instructions ---
+            if should_compile_copilot_instructions(routing_target):
+                ci_result = self._compile_copilot_instructions(
+                    preview_config, primitives
+                )
+                if ci_result is not None:
+                    result_map[COPILOT_INSTRUCTIONS_PATH] = ci_result.content
+
+            # --- CLAUDE.md ---
+            if should_compile_claude_md(routing_target):
+                from .claude_formatter import ClaudeFormatter
+                from .distributed_compiler import DistributedAgentsCompiler as _DAC
+
+                claude_fmt = ClaudeFormatter(str(self.base_dir))
+                dac = _DAC(
+                    str(self.base_dir),
+                    exclude_patterns=preview_config.exclude,
+                )
+                dir_map = dac.analyze_directory_structure(primitives.instructions)
+                place_map = dac.determine_agents_placement(
+                    primitives.instructions,
+                    dir_map,
+                    min_instructions=preview_config.min_instructions_per_file,
+                    debug=False,
+                )
+                claude_cfg = {
+                    "source_attribution": preview_config.source_attribution,
+                    "debug": False,
+                }
+                claude_result = claude_fmt.format_distributed(
+                    primitives, place_map, claude_cfg
+                )
+                for p, content in claude_result.content_map.items():
+                    try:
+                        rel = p.relative_to(self.base_dir.resolve())
+                    except ValueError:
+                        rel = p
+                    result_map[rel] = content
+
+            return result_map
+
+        finally:
+            self._logger = saved_logger
     
     def _compile_agents_md(self, config: CompilationConfig, primitives: PrimitiveCollection) -> CompilationResult:
         """Compile AGENTS.md files (VSCode/Copilot target).

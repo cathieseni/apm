@@ -1,7 +1,9 @@
 """APM compile command CLI."""
 
+import difflib
 import sys
 from pathlib import Path
+from typing import Dict, Optional
 
 import click
 
@@ -11,10 +13,13 @@ from ...core.command_logger import CommandLogger
 from ...core.target_detection import TargetParamType
 from ...primitives.discovery import discover_primitives
 from ...utils.console import (
+    STATUS_SYMBOLS,
+    _rich_echo,
     _rich_error,
     _rich_info,
     _rich_panel,
 )
+from ...utils.diagnostics import CATEGORY_DRIFT, DiagnosticCollector
 from .._helpers import (
     _atomic_write,
     _check_orphaned_packages,
@@ -193,6 +198,134 @@ def _resolve_compile_target(target):
     return target  # single string pass-through
 
 
+# ---------------------------------------------------------------------------
+# --check helpers
+# ---------------------------------------------------------------------------
+
+# Well-known output paths that APM may produce. Used by _run_check to detect
+# stale files that exist on disk but have no matching source primitives.
+# TODO(stale-distributed-agents): Expand to enumerate all distributed AGENTS.md
+# paths once the distributed compiler exposes a "possible outputs" query.
+_WELL_KNOWN_OUTPUTS = [
+    Path("AGENTS.md"),
+    Path("CLAUDE.md"),
+    Path(".github/copilot-instructions.md"),
+]
+
+
+def _run_check(
+    config: CompilationConfig,
+    logger: CommandLogger,
+    verbose: bool = False,
+) -> None:
+    """Execute ``apm compile --check`` verification.
+
+    Compares on-disk outputs against what ``preview_all_outputs`` would produce
+    and exits 0 (clean) or 1 (drift detected).
+    """
+    compiler = AgentsCompiler(".")
+    expected = compiler.preview_all_outputs(config)
+    collector = DiagnosticCollector(verbose=verbose)
+
+    # Content drift: expected files that are missing or differ on disk.
+    for path, expected_content in expected.items():
+        if not path.exists():
+            collector.drift(str(path))
+        else:
+            actual = path.read_text(encoding="utf-8")
+            if actual != expected_content:
+                collector.drift(str(path))
+
+    # Stale files: on disk but not in expected output set.
+    for p in _WELL_KNOWN_OUTPUTS:
+        if p.exists() and p not in expected:
+            collector.drift(str(p), detail="stale")
+
+    if collector.drift_count == 0:
+        if verbose:
+            logger.verbose_detail("All compiled outputs are up to date.")
+        return  # exit 0
+
+    _render_drift_report(collector, expected, verbose=verbose)
+    sys.exit(1)
+
+
+def _render_drift_report(
+    collector: DiagnosticCollector,
+    expected: Dict[Path, str],
+    verbose: bool = False,
+) -> None:
+    """Render the drift/stale report to stderr."""
+    sym_warning = STATUS_SYMBOLS.get("warning", "[!]")
+    sym_info = STATUS_SYMBOLS.get("info", "[i]")
+
+    content_drifts = [
+        d
+        for d in collector._diagnostics
+        if d.category == CATEGORY_DRIFT and d.detail != "stale"
+    ]
+    stale = [
+        d
+        for d in collector._diagnostics
+        if d.category == CATEGORY_DRIFT and d.detail == "stale"
+    ]
+    total = len(content_drifts) + len(stale)
+    plural = "file" if total == 1 else "files"
+
+    click.echo(
+        f"{sym_warning} Drift detected in {total} generated {plural}.",
+        err=True,
+    )
+
+    if content_drifts:
+        click.echo("", err=True)
+        click.echo("Files out of sync with .apm/ primitives:", err=True)
+        for d in content_drifts:
+            click.echo(f"  {d.message}", err=True)
+
+        if verbose:
+            click.echo("", err=True)
+            for d in content_drifts:
+                p = Path(d.message)
+                actual = ""
+                if p.exists():
+                    actual = p.read_text(encoding="utf-8")
+                exp = expected.get(p, "")
+                diff_lines = list(
+                    difflib.unified_diff(
+                        actual.splitlines(keepends=True),
+                        exp.splitlines(keepends=True),
+                        fromfile=str(p),
+                        tofile=str(p) + " (expected)",
+                        n=3,
+                    )
+                )
+                for line in diff_lines[:30]:
+                    _rich_echo(line.rstrip("\n"), color="dim")
+
+    if stale:
+        click.echo("", err=True)
+        click.echo("Stale files with no matching primitives:", err=True)
+        for d in stale:
+            click.echo(f"  {d.message}", err=True)
+
+    # Remediation block
+    click.echo("", err=True)
+    click.echo("To update, run:", err=True)
+    if stale and not content_drifts:
+        click.echo("  apm compile --clean", err=True)
+    elif content_drifts and not stale:
+        click.echo("  apm compile", err=True)
+    else:
+        click.echo("  apm compile --clean", err=True)
+
+    click.echo("", err=True)
+    click.echo(
+        f"{sym_info} --check failed: regenerate and commit the outputs.",
+        err=True,
+    )
+
+
 @click.command(help="Compile APM context into distributed AGENTS.md files")
 @click.option(
     "--output",
@@ -244,6 +377,11 @@ def _resolve_compile_target(target):
     is_flag=True,
     help="Remove orphaned AGENTS.md files that are no longer generated",
 )
+@click.option(
+    "--check",
+    is_flag=True,
+    help="Verify generated outputs match .apm/ primitives (read-only; exits 1 on drift). Implies --local-only.",
+)
 @click.pass_context
 def compile(
     ctx,
@@ -259,6 +397,7 @@ def compile(
     verbose,
     local_only,
     clean,
+    check,
 ):
     """Compile APM context into distributed AGENTS.md files.
 
@@ -280,6 +419,16 @@ def compile(
     """
     logger = CommandLogger("compile", verbose=verbose, dry_run=dry_run)
 
+    # --check mode: force local-only and validate flag incompatibility.
+    if check:
+        local_only = True
+        if validate or watch or dry_run or single_agents or clean:
+            logger.error(
+                "--check cannot be combined with --validate, --watch,"
+                " --dry-run, --single-agents, or --clean"
+            )
+            sys.exit(2)
+
     try:
         # Check if this is an APM project first
         from pathlib import Path
@@ -288,7 +437,7 @@ def compile(
             logger.error("Not an APM project - no apm.yml found")
             logger.progress(" To initialize an APM project, run:")
             logger.progress("   apm init")
-            sys.exit(1)
+            sys.exit(2 if check else 1)
 
         # Check if there are any instruction files to compile
         from ...compilation.constitution import find_constitution
@@ -303,9 +452,12 @@ def compile(
             or any(apm_dir.rglob("*.chatmode.md"))
         )
 
-        # If no primitive sources exist, check deeper to provide better feedback
+        # If no primitive sources exist, check deeper to provide better feedback.
+        # In --check mode, skip this guard: no primitives is a valid state and
+        # _run_check handles the stale-file detection naturally.
         if (
-            not apm_modules_exists
+            not check
+            and not apm_modules_exists
             and not local_apm_has_content
             and not constitution_exists
         ):
@@ -331,7 +483,7 @@ def compile(
                 logger.progress("   3. Then create .instructions.md or .chatmode.md files")
 
             if not dry_run:  # Don't exit on dry-run to allow testing
-                sys.exit(1)
+                sys.exit(2 if check else 1)
 
         # Validation-only mode
         if validate:
@@ -369,7 +521,8 @@ def compile(
             _watch_mode(output, chatmode, no_links, dry_run, verbose=verbose)
             return
 
-        logger.start("Starting context compilation...", symbol="cogs")
+        if not check:
+            logger.start("Starting context compilation...", symbol="cogs")
 
         # Auto-detect target if not explicitly provided
         from ...core.target_detection import detect_target, get_target_description
@@ -413,8 +566,13 @@ def compile(
         )
         config.with_constitution = with_constitution
 
+        # --check: read-only verification mode.
+        if check:
+            _run_check(config, logger, verbose=verbose)
+            return
+
         # Handle distributed vs single-file compilation
-        if config.strategy == "distributed" and not single_agents:
+        if not check and config.strategy == "distributed" and not single_agents:
             # Show target-aware message with detection reason. Use
             # get_target_description() so any future target added to
             # target_detection shows up here automatically.
