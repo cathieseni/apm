@@ -170,7 +170,7 @@ apm experimental reset verbose-version
 | Name                  | Description                                                                      |
 |-----------------------|----------------------------------------------------------------------------------|
 | `verbose-version`     | Show Python version, platform, and install path in `apm --version`.              |
-| `marketplace-authoring`| Enable marketplace authoring and discovery commands.                             |
+| `marketplace-authoring`| Enable marketplace authoring commands (init, build, publish, etc.).              |
 
 New flags are proposed via [CONTRIBUTING.md](https://github.com/microsoft/apm/blob/main/CONTRIBUTING.md#how-to-add-an-experimental-feature-flag) and graduate to default when stable. See the contributor recipe for the full lifecycle.
 

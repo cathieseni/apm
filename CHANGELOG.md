@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Hardened `apm-review-panel` skill: one-comment output contract, pre-arbitration completeness gate, Hybrid E Auth Expert routing, verdict template extracted to `assets/`, and `python-architect` mandatory three-artifact PR review contract (classDiagram + flowchart + Design patterns). (#882)
-- `apm marketplace` commands ring-fenced behind `apm experimental enable marketplace-authoring` feature flag (default: disabled) (#790)
+- `apm marketplace` authoring commands (init, build, check, outdated, doctor, publish, package) ring-fenced behind `apm experimental enable marketplace-authoring` feature flag (default: disabled) (#790)
 - Renamed `apm marketplace plugin` subgroup to `apm marketplace package` for npm/pip/cargo familiarity (#722)
 - Grouped `apm marketplace --help` output into "Consumer commands" and "Authoring commands" sections (#722)
 - `apm marketplace init` now accepts `--name` and `--owner` flags for non-interactive scaffolding (#722)
