@@ -86,6 +86,7 @@ def _integrate_materialization(
             package_name=dep_key,
             logger=logger,
             scope=ctx.scope,
+            ctx=ctx,
         )
         for k in (
             "prompts", "agents", "skills", "sub_skills",
