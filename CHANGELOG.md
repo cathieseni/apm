@@ -10,11 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- New `pr-description-skill` skill bundle: enforces a 10-section PR body shape (TL;DR / Problem / Approach / Implementation / Diagrams / Trade-offs / Benefits / Validation / How to test, plus the `Co-authored-by` trailer) with a cite-or-omit rule for every WHY-claim, GFM-rendered output, ASCII-only template source, and validated mermaid diagrams. Captures the meta-pattern from PR #882 as a reusable scaffold so future PR bodies meet the same bar without per-PR specialist subagent intervention. (#884)
+- `includes:` manifest field (auto | list) for explicit governance of local `.apm/` content. Closes audit-blindness gap (#887).
+- `apm audit --ci` now verifies hash integrity of locally deployed files, detecting hand-edits and config drift. (#887)
+- `policy.manifest.require_explicit_includes` policy field enforces explicit `includes` lists (rejects `auto` + undeclared). (#887)
+- `includes-consent` advisory appears in `apm audit` CLI/JSON output when local content is deployed without an explicit `includes:` declaration (#887)
 - `apm-primitives-architect` agent: reusable persona for designing and critiquing `.apm/` skill bundles. (#882)
+- `apm-triage-panel` skill: three-persona panel (DevX UX, Supply Chain Security, APM CEO; conditional OSS Growth Hacker) for issue triage producing single labelled-decision comment with structured JSON tail. Mirrors `apm-review-panel` orchestration model. (#915)
 - CI: add `APM Self-Check` to `ci.yml` for `apm audit --ci`, regeneration-drift validation, and `merge-gate.yml` `EXPECTED_CHECKS` coverage. (#885)
 
 ### Changed
 
+- `find_primitive_files()` now uses `os.walk` with early directory pruning so `compilation.exclude` patterns prevent traversal into excluded subtrees on large repos. (#870)
+- Lockfile in-memory shape: a synthesized self-entry now appears in `LockFile.dependencies` for local content. The on-disk YAML format is unchanged (data still serialized as flat `local_deployed_files`/`local_deployed_file_hashes` fields). (#887)
 - Hardened `apm-review-panel` skill: one-comment output contract, pre-arbitration completeness gate, Hybrid E Auth Expert routing, verdict template extracted to `assets/`, and `python-architect` mandatory three-artifact PR review contract (classDiagram + flowchart + Design patterns). (#882)
 - `apm marketplace` authoring commands (init, build, check, outdated, doctor, publish, package) ring-fenced behind `apm experimental enable marketplace-authoring` feature flag (default: disabled) (#790)
 - [Experimental] Renamed `apm marketplace plugin` subgroup to `apm marketplace package` for npm/pip/cargo familiarity (#722)
@@ -25,12 +33,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+<<<<<<< feat/722-marketplace-maintainer-ux
 - [Experimental] Hidden unimplemented `--check-refs` flag on `validate` command (#722)
 - [Experimental] Fixed `includePrerelease` camelCase typo in init template comment (#722)
+=======
+- `apm install` (user scope): `init_link_resolver` now scopes `discover_primitives` to `~/.apm/` instead of `~/`, preventing recursive-glob across the entire home directory. Fixes #830 (#850)
+- Audit blindness for local `.apm/` content -- `apm audit --ci` now detects drift, missing files, and content tampering on locally-authored files (not just installed packages). (#887)
+- Packer leak risk: local-content fields (`local_deployed_files`, `local_deployed_file_hashes`) are now stripped from bundled lockfiles, preventing phantom self-entries on unpack. (#887)
+>>>>>>> main
 
 ### Removed
 
 - CI: deleted `ci-integration-pr-stub.yml`. The four stubs were a holdover from the pre-merge-gate model where branch protection required each Tier 2 check name directly. After #867, branch protection requires only `gate`, so the stubs are dead weight. Reduced `EXPECTED_CHECKS` in `merge-gate.yml` to just `Build & Test (Linux)`.
+
+### Fixed
+
+- `apm update` sanitises the subprocess environment before invoking the platform installer so the bundled PyInstaller `LD_LIBRARY_PATH` / `DYLD_*` no longer leak into system binaries (`curl`, `tar`, `sudo`) spawned by `install.sh`. Previously the installer's first `curl` call could abort with `libssl.so.3: version 'OPENSSL_3.2.0' not found` on distros whose system `libcurl` requires a newer OpenSSL ABI than the APM bundle ships (Debian trixie arm64 dev-containers, Fedora 43, and similar). Restoration uses PyInstaller's official `<VAR>_ORIG` protocol, preserving the user's own `LD_LIBRARY_PATH` exports. Closes #894
 
 ## [0.9.2] - 2026-04-23
 
