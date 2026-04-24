@@ -61,6 +61,12 @@ FLAGS: dict[str, ExperimentalFlag] = {
         default=False,
         hint="Run 'apm --version' to see the new output.",
     ),
+    "marketplace_commands": ExperimentalFlag(
+        name="marketplace_commands",
+        description="Enable marketplace authoring and discovery commands.",
+        default=False,
+        hint="Run 'apm marketplace --help' to see available commands.",
+    ),
 }
 
 
