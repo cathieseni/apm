@@ -40,7 +40,7 @@ local_deployed_file_hashes:
   .github/agents/oss-growth-hacker.agent.md: sha256:8d18f5be46913c40ad3aa66fb984575a88988cfac402d39353cdfb09f7e582c5
   .github/agents/python-architect.agent.md: sha256:4118e60a56d4b94183915a3650d2a4c3294d2b4a5daecbb547a731b04a679b54
   .github/agents/supply-chain-security-expert.agent.md: sha256:9a4e731b12e7658f71d54c22e90f80ce0c45e3eacbb069b8505ed96ec9e79ba5
-  .github/agents/visual-communicator.agent.md: sha256:4ea038f33bb1f7a912840995bdec8b473e86e821634c576fd7d5fe115956c3eb
+  .github/agents/visual-communicator.agent.md: sha256:e3e243a983706cc70a5ce4a96964eb0625f105cb30a31bc6d9d8fdc87a26491c
   .github/instructions/changelog.instructions.md: sha256:1e51ec4c74e847967962bd279dc4c6e582c5d3578490b3c28d5f3acd3e05f73e
   .github/instructions/cicd.instructions.md: sha256:9c0fafc74f743aa97e5adba2168d66c9e3a327b135065e3b804bdbb5f04cda5d
   .github/instructions/cli.instructions.md: sha256:8e39e8d5047ce88575cb02f87c2bcede584dfef258bd86f7466c7badf136541a
