@@ -176,6 +176,47 @@ unless the artifact carries it.
 
 ---
 
+## P7. Composed module (depend, don't duplicate)
+
+WHEN: a primitive your design needs ALREADY EXISTS as another
+module the project can pull in (or could plausibly be one). Most
+often: a shared persona, a cross-cutting rule set, a usage skill
+for a dependent tool, a domain glossary.
+
+INTERLOCK: not a runtime pattern; a SOURCE-TIME pattern. The
+interlock is the dependency edge in the manifest plus version
+pinning.
+
+```
+your design
+   |
+   +-- inline asset A             (composition mode: INLINE)
+   +-- depends-on local sibling B (composition mode: LOCAL SIBLING)
+   +-- depends-on external module
+       owner/foo                  (composition mode: EXTERNAL MODULE)
+                |
+                +-- transitive: owner/foo's own dependency closure
+```
+
+CLASSIC ANALOGUE: library import; "depend, don't duplicate";
+package-manager-driven composition.
+
+JUSTIFICATION: durable truth #4 (composition is first-class). A
+primitive duplicated across N projects drifts; depending on a
+single module preserves consistency, allows independent release
+cadence, and makes the version explicit via pinning.
+
+PROMOTION RULE: a LOCAL SIBLING that meets any of {rule of three;
+independent release cadence; different owner; pinning-worthy}
+should be PROMOTED to an EXTERNAL MODULE. See
+`composition-substrate.md`.
+
+ANTI-PATTERN: do NOT introduce an EXTERNAL MODULE when none of
+the promotion criteria apply -- you trade evolution speed for no
+real reuse benefit.
+
+---
+
 ## Selection heuristic (decision flow)
 
 ```

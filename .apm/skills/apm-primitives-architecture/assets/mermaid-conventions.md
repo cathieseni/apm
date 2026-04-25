@@ -10,6 +10,7 @@ GitHub-render gotchas to avoid.
 |---|---|---|
 | 2 | `flowchart` | component composition: which modules, which depend on which |
 | 3 | `sequenceDiagram` | thread spawn / fan-in / interlock points |
+| 3.5 | `flowchart LR` | dependency graph: this module + external modules + closure edges |
 | optional | `classDiagram` | only when modeling true type hierarchies (rare for primitive design) |
 
 Keep each diagram under 25 nodes. Larger diagrams indicate the
@@ -59,6 +60,29 @@ sequenceDiagram
     ChildA-->>Parent: findings
     ChildB-->>Parent: findings
     Note over Parent: synthesize; single-writer interlock on output
+```
+
+### Dependency graph diagram (step 3.5, flowchart LR)
+
+- One node per module in scope plus one node per declared external
+  module dependency.
+- Edge labels mark composition mode: `INLINE`, `LOCAL SIBLING`,
+  `EXTERNAL`.
+- Show transitive closure edges only when you can name them
+  deterministically; otherwise mark `(closure: ...)` as a comment.
+- Do NOT include manifest filenames or CLI commands; this diagram
+  is at the substrate layer.
+
+```
+flowchart LR
+    Self[your design]
+    Sib[local sibling primitive]
+    Ext[(owner/foo)]
+    ExtClosure[(owner/foo's deps...)]
+    Self -- INLINE --> Self
+    Self -- LOCAL SIBLING --> Sib
+    Self -- EXTERNAL --> Ext
+    Ext -. transitive .-> ExtClosure
 ```
 
 ## GitHub-render gotchas (drift-known)

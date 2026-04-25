@@ -56,20 +56,25 @@ emits the natural-language modules from the artifacts.
         v                    load assets/architecture-patterns.md
    3 thread / sequence diagram
         v
+ 3.5 composition decision  <-- load assets/composition-substrate.md
+        v                    (per-box: inline | sibling | external module)
    4 SoC pass against existing modules
         v
    5 classic + PROSE + LLM-physics compliance check
         v
-   6 handoff packet (diagrams + interface sketch + declared targets)
+   6 handoff packet (diagrams + interface sketch + declared targets
+                     + module composition table)
         v                                      [DESIGN ENDS HERE]
    ----- caller / coder thread takes over -----
    7a portability check
         v                  load runtime-affordances/common.md (always)
    7b draft natural-       load runtime-affordances/per-harness/<x>.md
       language module      ONLY if step 7a flagged a per-harness need
-        v
+        v                  load module-system-adapters/<tool>.md
+        v                  ONLY if step 3.5 declared external modules
    8 validate against diagrams + lint (PROSE 5-axis, size budget,
-     ASCII, coherent unit, portability honored)
+     ASCII, coherent unit, portability honored, declared external
+     modules wired correctly)
 ```
 
 ### Step 1 - intent + scope
@@ -102,11 +107,37 @@ the diagram shows a single-thread loop, redo: it is a fan-out
 opportunity. The default for that shape is fan-out + parent
 synthesizer.
 
+### Step 3.5 - composition decision
+
+Load `assets/composition-substrate.md`. For EACH box in the
+component diagram, decide its composition mode and record the
+rationale:
+
+- INLINE asset within this primitive (default for content unique
+  to this module).
+- LOCAL SIBLING primitive in the same source tree (default when
+  the content is reused only within this project).
+- EXTERNAL MODULE pulled in via the project's module system
+  (default when the content meets at least one of: rule of three
+  -- needed in 3+ projects; independent release cadence; owned by
+  a different team; benefits from version pinning across
+  consumers).
+
+Then sketch a `flowchart LR` DEPENDENCY GRAPH showing this module
+plus its declared external modules and any transitive closure
+edges you can name. Mark each edge with the composition mode.
+
+If any external module is declared, the handoff packet MUST list
+it under "external modules required" so the coder step (7b) loads
+the module-system adapter.
+
 ### Step 4 - SoC pass
 
-For each module in the component diagram, check:
+For each module in the component diagram (now annotated with
+composition modes from step 3.5), check:
 - Does an existing module already do this? If yes, depend on it
-  via link; do not duplicate.
+  via link; do not duplicate. If the existing module lives outside
+  this project, mark it EXTERNAL MODULE and revisit step 3.5.
 - Does this module overlap a sibling's trigger conditions? If yes,
   redraw boundaries.
 - Does this module inline content that belongs in a separate
@@ -126,8 +157,13 @@ the design; return to step 2.
 Produce a single artifact containing:
 - The component diagram (step 2).
 - The thread/sequence diagram (step 3).
+- The dependency graph diagram (step 3.5).
 - A short interface sketch per module: name, trigger description,
   inputs, outputs, dependencies (as relative links).
+- The module composition table: per box, INLINE | LOCAL SIBLING
+  | EXTERNAL MODULE, with rationale.
+- The list of external modules required (drives whether step 7b
+  loads a module-system adapter).
 - The declared target set: `common-only` | `<list of harnesses>`.
 - Any compliance findings still open (with severity).
 
@@ -152,6 +188,14 @@ common substrate (return to step 2).
 Using the loaded substrate (and per-harness adapter if justified),
 emit each module's body. This is the only step that touches
 today's syntax.
+
+If the handoff packet declares any EXTERNAL MODULE under "external
+modules required", the caller ALSO loads
+`assets/module-system-adapters/<tool>.md` for the project's
+current module-system tool. That adapter delegates to the relevant
+usage skill (today: APM via the `apm-usage` skill) for manifest /
+CLI / lockfile syntax. The architect persona stays ignorant of
+that syntax; the coder thread learns it on demand.
 
 ### Step 8 - validate (caller-side)
 
