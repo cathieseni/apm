@@ -97,6 +97,19 @@ In OpenCode: Commands + CLI invocation (no built-in scheduler)
   execution is within an existing session context.
 - Source: Playwright snapshot (opencode-commands.md)
 
+## 6. PLAN PERSISTENCE
+
+In OpenCode: TODO: official docs needed.
+- PLAN slot: TODO (no native plan-file affordance documented;
+  convention is to write to a workspace file and re-read it)
+- TODO/STATUS slot: TODO (no documented in-context todo tool; check
+  most recent OpenCode docs)
+- CHECKPOINT slot: TODO
+- FILES slot: working directory
+- Notes: the substrate-portable fallback applies (plan.md in
+  workspace, re-read at re-grounding boundaries)
+- Source: TODO: official docs page for OpenCode planning / state
+
 ## Capabilities OpenCode lacks (vs substrate)
 
 - Scope-attached rule files: OpenCode has no glob-based rule

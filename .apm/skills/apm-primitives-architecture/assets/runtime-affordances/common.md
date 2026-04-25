@@ -9,7 +9,7 @@ The architect persona designs against THIS file. Per-harness
 adapters in `per-harness/` map the substrate to specific syntax;
 load them only when a primitive must reach beyond the substrate.
 
-## The five primitive concepts
+## The six primitive concepts
 
 ### 1. PERSONA SCOPING FILE
 
@@ -105,6 +105,50 @@ Substrate behavior:
   triggers unless persistence is engineered explicitly (pattern
   P6 in architecture-patterns.md).
 
+### 6. PLAN PERSISTENCE
+
+Underlying property: ATTENTION DEGRADATION. Tokens far from the
+current focus point exert weaker influence on inference. As a
+session grows, earlier decisions, todos, and constraints fade from
+the model's effective recall even though they remain technically
+in-context.
+
+Coping mechanism every modern harness now exposes: a runtime store
+where the thread persists its plan and progress, then re-reads the
+store at re-grounding boundaries (new step, new file, new spawn).
+
+Substrate fields (every harness offers these or equivalents):
+- a PLAN ARTIFACT slot (free-form, typically markdown) capturing
+  the problem statement, approach, and step list
+- a TODO/STATUS slot (structured, queryable) for per-step status
+  with optional dependencies between items
+- (optional) a CHECKPOINT slot for milestone snapshots
+- (optional) a FILES slot for cross-step artifacts that must
+  outlive any single step's context
+
+Substrate behavior:
+- The thread WRITES the plan once, EARLY (before drafting modules
+  or spawning workers).
+- The thread READS the plan again at re-grounding boundaries:
+  start of each step, return from a spawn, after a tool failure,
+  or whenever uncertainty rises.
+- Spawned child threads receive a POINTER to the relevant slice
+  of the plan (or a copy of it) in their task description; they
+  do not inherit the parent's context.
+- The store survives the context window by definition; it is
+  the explicit cure for ATTENTION DEGRADATION.
+
+When to use:
+- Work spans more than ~3 dependent steps.
+- Work spans more than one file.
+- Work will spawn one or more child threads that must coordinate.
+- Session is expected to be long enough that early constraints
+  risk decay.
+
+Skip when:
+- Single-shot one-step work where the entire instruction set fits
+  comfortably in the prompt and no spawn is involved.
+
 ## Substrate invariants
 
 These hold across every supported harness:
@@ -117,6 +161,9 @@ These hold across every supported harness:
 - No primitive can mutate another primitive's content at runtime.
 - Tokens cost attention. Smaller substrates yield sharper
   inference.
+- Attention decays with distance from the focus point. State that
+  must survive that decay belongs in a persistence slot, not in
+  the prompt.
 
 ## What the substrate deliberately does NOT cover
 
@@ -130,6 +177,9 @@ adapter files:
   use (file ops, web fetch, shell).
 - The mechanism for declaring multi-target compatibility (some
   harnesses use a magic folder; others use a config file).
+- The exact plan-persistence layout (file path, in-context list,
+  embedded SQL, checkpoints folder, etc.). Substrate guarantees
+  the SLOTS exist; per-harness adapters name the syntax.
 
 A primitive that stays within this substrate is portable across
 all harnesses APM supports. A primitive that reaches into a
@@ -148,4 +198,4 @@ choice MUST be declared in the primitive's design (see
 ## Index of per-harness adapters
 
 See `per-harness/` for the harness-specific mappings. Each adapter
-is structured to map back to the five concepts above, in order.
+is structured to map back to the six concepts above, in order.

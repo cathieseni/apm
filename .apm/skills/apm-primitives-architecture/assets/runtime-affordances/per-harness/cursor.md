@@ -72,6 +72,24 @@ In Cursor: Hooks (.cursor/hooks/*.json) for event-driven actions.
 - Notes: Hook semantics not fully documented in official API.
 - Source: https://docs.cursor.com/hooks
 
+## 6. PLAN PERSISTENCE
+
+In Cursor: TODO: official docs needed.
+- PLAN slot: TODO (no first-class plan file documented; convention
+  is to keep plans in the chat or write a markdown file the agent
+  re-reads; .cursor/rules can hold persistent constraints but are
+  not a session plan)
+- TODO/STATUS slot: TODO (Cursor agent has no documented
+  TodoWrite-equivalent tool surfaced to the model; check most
+  recent docs)
+- CHECKPOINT slot: TODO
+- FILES slot: working directory (workspace)
+- Notes: in absence of a native plan tool, the substrate-portable
+  fallback is to write `plan.md` to the workspace and instruct the
+  agent to re-read it at re-grounding points
+- Source: TODO: official docs page for Cursor agent state /
+  todo / planning tooling
+
 ## Capabilities Cursor lacks (vs substrate)
 
 - CHILD-THREAD SPAWN: No first-class programmatic subagent spawn from

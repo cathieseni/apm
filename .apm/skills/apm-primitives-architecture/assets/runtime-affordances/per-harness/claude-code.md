@@ -76,6 +76,26 @@ In Claude Code: Hooks + Slash Commands (no built-in scheduler)
   persistence; each hook invocation receives context and can return modifications
 - Source: https://docs.claude.com/en/docs/claude-code/hooks
 
+## 6. PLAN PERSISTENCE
+
+In Claude Code: the TodoWrite tool (in-context structured list).
+- PLAN slot: no first-class plan file; convention is to maintain
+  the plan inside CLAUDE.md or in the conversation; for durable
+  plans, write to a file with the file tools (e.g. `plan.md` in
+  the working directory) and re-read it at re-grounding boundaries
+- TODO/STATUS slot: TodoWrite tool maintains an ordered list with
+  statuses (typically `pending` | `in_progress` | `completed`);
+  list lives in conversation state; the model is prompted to
+  update the list as work progresses
+- CHECKPOINT slot: not native; convention is to commit progress
+  to git or write summary files
+- FILES slot: working directory (the CLI runs against a workspace);
+  no isolated session-files area
+- Notes: TodoWrite is intended as the cure for attention decay
+  inside a single Claude Code session; for cross-session plans,
+  fall back to file-based persistence
+- Source: TODO: official docs page for the TodoWrite tool
+
 ## Capabilities Claude Code lacks (vs substrate)
 
 - Glob-based scope predicates: CLAUDE.md uses directory hierarchy only (not glob patterns).

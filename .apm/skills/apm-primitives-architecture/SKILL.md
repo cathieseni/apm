@@ -63,7 +63,8 @@ emits the natural-language modules from the artifacts.
    5 classic + PROSE + LLM-physics compliance check
         v
    6 handoff packet (diagrams + interface sketch + declared targets
-                     + module composition table)
+                     + module composition table + todos)
+        v             [PERSIST PACKET to plan store; truth #5]
         v                                      [DESIGN ENDS HERE]
    ----- caller / coder thread takes over -----
    7a portability check
@@ -72,6 +73,7 @@ emits the natural-language modules from the artifacts.
       language module      ONLY if step 7a flagged a per-harness need
         v                  load module-system-adapters/<tool>.md
         v                  ONLY if step 3.5 declared external modules
+        v                  RELOAD plan before each module / spawn
    8 validate against diagrams + lint (PROSE 5-axis, size budget,
      ASCII, coherent unit, portability honored, declared external
      modules wired correctly)
@@ -152,7 +154,7 @@ Scope, Orchestrated Composition, Safety Boundaries, Explicit
 Hierarchy) and the three durable LLM truths. Any BLOCKER stops
 the design; return to step 2.
 
-### Step 6 - handoff packet
+### Step 6 - handoff packet (this IS the plan; persist it)
 
 Produce a single artifact containing:
 - The component diagram (step 2).
@@ -166,6 +168,17 @@ Produce a single artifact containing:
   loads a module-system adapter).
 - The declared target set: `common-only` | `<list of harnesses>`.
 - Any compliance findings still open (with severity).
+- A todo list (one entry per module to draft, plus validation),
+  with dependencies between entries where they exist.
+
+PERSIST THE PACKET. Per truth #5 (plan before execution) and
+substrate concept 6 (PLAN PERSISTENCE), the handoff packet MUST
+be written to the runtime's plan store BEFORE step 7b begins.
+The exact location is harness-specific (see
+`runtime-affordances/per-harness/<x>.md` -> section 6); the
+substrate guarantees that a slot exists in every supported
+harness. If unsure, write it to a markdown file named `plan.md`
+in the session's working area; that is portable.
 
 DESIGN ENDS HERE. Stop. Do not draft natural language.
 
@@ -188,6 +201,12 @@ common substrate (return to step 2).
 Using the loaded substrate (and per-harness adapter if justified),
 emit each module's body. This is the only step that touches
 today's syntax.
+
+RELOAD THE PLAN before drafting each module, before each spawn,
+and after each spawn returns. The plan was persisted at step 6
+precisely so the executor can reground itself instead of relying
+on degraded recall (truth #1, substrate concept 6, pattern P8).
+Update the todo list as each module reaches done.
 
 If the handoff packet declares any EXTERNAL MODULE under "external
 modules required", the caller ALSO loads

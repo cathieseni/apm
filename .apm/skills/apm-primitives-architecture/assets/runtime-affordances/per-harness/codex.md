@@ -68,6 +68,21 @@ In Codex CLI: External orchestration required.
 - Source: APM apm.yml schema defines chatmodes and prompts;
   runtime/codex_runtime.py implements invocation as subprocess call.
 
+## 6. PLAN PERSISTENCE
+
+In Codex CLI: no first-class persistence tooling.
+- PLAN slot: workspace file convention (write `plan.md`, re-read
+  it); AGENTS.md may hold long-lived constraints but is not a
+  session plan
+- TODO/STATUS slot: not native; convention is to maintain a
+  checklist in `plan.md` itself or in commit messages
+- CHECKPOINT slot: not native; commit history is the de-facto log
+- FILES slot: working directory
+- Notes: Codex deliberately keeps the surface minimal; plan
+  persistence is the caller's responsibility. The substrate-
+  portable fallback (plan.md + re-read) is the recommended pattern
+- Source: TODO: official docs page for Codex CLI session state
+
 ## Capabilities Codex CLI lacks (vs substrate)
 
 - PERSONA SCOPING FILE: No isolated persona files. Workaround: embed

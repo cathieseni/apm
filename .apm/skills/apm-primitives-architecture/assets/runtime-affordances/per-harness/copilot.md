@@ -71,6 +71,29 @@ In Copilot: TODO: official docs needed
   are not fully documented in current accessible GitHub docs.
 - Source: TODO: official docs needed
 
+## 6. PLAN PERSISTENCE
+
+In Copilot CLI: built-in per-session state directory (the harness
+this conversation is running in).
+- PLAN slot: `~/.copilot/session-state/<session_id>/plan.md`
+  (plain markdown; created/edited freely; toggled in via plan mode
+  with Shift+Tab)
+- TODO/STATUS slot: per-session SQLite database with `todos` and
+  `todo_deps` tables exposed via the `sql` tool; statuses
+  `pending` | `in_progress` | `done` | `blocked`; dependencies
+  expressed as edges
+- CHECKPOINT slot:
+  `~/.copilot/session-state/<session_id>/checkpoints/<NNN>-<title>.md`
+  (auto-emitted at meaningful milestones; `index.md` lists them)
+- FILES slot: `~/.copilot/session-state/<session_id>/files/`
+  for non-committable artifacts that survive checkpoints
+- Notes: re-grounding pattern is to read plan.md early in each
+  major phase and to query the todos table for ready items;
+  `report_intent` surfaces current intent in the UI in parallel
+- Source: TODO: official docs page that names the session-state
+  layout (the layout is documented in-session via the `<session_context>`
+  block injected into the agent prompt)
+
 ## Capabilities Copilot lacks (vs substrate)
 
 - Explicit child-thread spawn syntax: agent spawning is not yet publicly

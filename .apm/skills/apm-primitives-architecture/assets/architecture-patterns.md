@@ -217,6 +217,58 @@ real reuse benefit.
 
 ---
 
+## P8. Plan-first with persisted plan
+
+WHEN: any of:
+- work spans more than ~3 dependent steps;
+- work touches more than one file;
+- work will spawn one or more child threads that must coordinate;
+- session is expected to be long enough that early constraints
+  risk attention decay (architect truth #1).
+
+This pattern is ORTHOGONAL to P1-P7. Combine it with whichever
+topology fits the work shape.
+
+INTERLOCK: the executor MUST reload the plan at re-grounding
+boundaries (start of each step, return from a spawn, after a tool
+failure). Without the reload, the persistence is dead weight.
+
+```
+[ planning phase ]            [ persistence layer ]
+    decide problem      -->   PLAN ARTIFACT (plan.md or equiv.)
+    decompose to steps  -->   TODO/STATUS slot
+    pick topology       -->   (CHECKPOINT slot, on milestones)
+                                    ^
+[ execution phase ]                 |
+    step k starts ----- reload -----+
+       do work
+    step k ends ------- update -----+
+       (advance status)
+    spawn child? --> child gets POINTER to plan slice in its task
+    return from spawn -- reload ----+
+       (verify state still matches plan; correct if not)
+```
+
+CLASSIC ANALOGUE: write-ahead log + idempotent replay; or
+plan-then-execute compilers; or BDD scenario file driving step
+implementations.
+
+JUSTIFICATION: cures attention decay (truth #1). Without an
+external plan, long sessions silently drop earlier decisions,
+todos, and constraints. With one, every re-grounding event is a
+chance to recover.
+
+ANTI-PATTERN: writing the plan at the END (post-hoc rationalization)
+rather than at the start; or writing it once and never reloading;
+or stuffing the entire plan into every spawned child's task
+description (defeats context isolation, see P2).
+
+REQUIRED SLOTS (substrate): PLAN ARTIFACT + TODO/STATUS. Optional:
+CHECKPOINT, FILES. The runtime-affordances substrate names the
+slots; the per-harness adapter names the concrete mechanism.
+
+---
+
 ## Selection heuristic (decision flow)
 
 ```
@@ -255,3 +307,8 @@ single-loop    with no shared state?
 
 When two patterns fit, prefer the one that gives each thread a
 narrower context (fewer competing tokens).
+
+P8 is orthogonal: combine it with the chosen topology whenever the
+WHEN-clause for P8 fires. P8 is the cure for attention decay; the
+topology choice (P1-P7) is the cure for parallelism / isolation /
+verifiability concerns.

@@ -59,11 +59,16 @@ reasoning.
 +-------------------------------------------------------------+
 ```
 
-Three durable truths about LLM execution that drive every design call:
+Five durable truths about LLM execution that drive every design call:
 
 1. CONTEXT IS FINITE AND FRAGILE. Tokens compete for attention.
-   Tokens far from current focus degrade in influence on inference.
-   Decompose work to keep critical instructions near the focus point.
+   Tokens far from current focus degrade in influence on inference
+   (attention decay over distance). Decompose work to keep critical
+   instructions near the focus point. Corollary: any state that must
+   survive long sessions, multi-step execution, or thread spawns
+   MUST live OUTSIDE the context window (a plan file, a structured
+   store, a checkpoint) and be reloaded at re-grounding boundaries.
+   Plans live on disk, not in memory.
 
 2. CONTEXT MUST BE EXPLICIT. Threads are stateless across spawns.
    Anything not loaded as text into a thread does not exist for that
@@ -79,6 +84,14 @@ Three durable truths about LLM execution that drive every design call:
    (depend vs duplicate; inline vs sibling vs external; pinning;
    distribution boundary) as part of the architecture, not a
    packaging afterthought.
+
+5. PLAN BEFORE EXECUTION. Decision and execution are separate
+   activities and SHOULD live in separate context regions. Any
+   non-trivial work (multi-step, multi-file, or spawn-bound)
+   produces a PLAN ARTIFACT before any module body is drafted.
+   The plan persists to a runtime-provided store (file, structured
+   store, or both) so the executor can reground itself instead of
+   relying on degraded recall. The handoff packet IS the plan.
 
 ## Disambiguation you enforce in every review
 
@@ -145,7 +158,7 @@ spec.
             v
    +------------------+
    | 5 classic+PROSE  |  apply the principles table; PROSE 5-axis
-   |   + LLM-physics  |  + the three durable truths
+   |   + LLM-physics  |  + the five durable truths
    |   compliance     |
    +--------+---------+
             v
