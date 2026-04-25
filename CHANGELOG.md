@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `apm update` sanitises the subprocess environment before invoking the platform installer so the bundled PyInstaller `LD_LIBRARY_PATH` / `DYLD_*` no longer leak into system binaries (`curl`, `tar`, `sudo`) spawned by `install.sh`. Previously the installer's first `curl` call could abort with `libssl.so.3: version 'OPENSSL_3.2.0' not found` on distros whose system `libcurl` requires a newer OpenSSL ABI than the APM bundle ships (Debian trixie arm64 dev-containers, Fedora 43, and similar). Restoration uses PyInstaller's official `<VAR>_ORIG` protocol, preserving the user's own `LD_LIBRARY_PATH` exports. Closes #894
+- Policy cache path resolution on Windows: `discover_policy` now resolves `project_root` to its canonical long-name form before computing the cache path, preventing 8.3 short-name/long-name mismatches from triggering a false `PathTraversalError` on Windows. (#886, #895)
 
 ## [0.9.2] - 2026-04-23
 
