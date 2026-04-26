@@ -141,17 +141,46 @@ safe-outputs:
   # add-labels and remove-labels accept `target: "*"`; assign-milestone
   # in v0.68.3 does NOT (the runtime takes `issue_number` in the payload
   # so SCHEDULED_SWEEP can still hit multiple issues).
+  #
+  # IMPORTANT: in gh-aw v0.68.3 the `allowed` field uses STRICT equality
+  # (Array.prototype.includes) -- it does NOT support glob patterns, only
+  # `blocked` does. We therefore enumerate every legal taxonomy label
+  # literally. status/needs-triage is intentionally NOT in this list:
+  # only humans apply that label as a fast-path trigger, never the panel.
   add-labels:
     allowed:
-      - status/triaged
-      - status/accepted
-      - status/blocked
-      - status/needs-design
-      - status/in-flight
-      - "theme/*"
-      - "area/*"
-      - "type/*"
-      - "priority/*"
+      - "theme/governance"
+      - "theme/portability"
+      - "theme/security"
+      - "area/audit-policy"
+      - "area/ci-cd"
+      - "area/cli"
+      - "area/content-security"
+      - "area/distribution"
+      - "area/docs-site"
+      - "area/enterprise"
+      - "area/lockfile"
+      - "area/marketplace"
+      - "area/mcp-config"
+      - "area/mcp-trust"
+      - "area/multi-target"
+      - "area/package-authoring"
+      - "area/testing"
+      - "type/architecture"
+      - "type/automation"
+      - "type/bug"
+      - "type/docs"
+      - "type/feature"
+      - "type/performance"
+      - "type/refactor"
+      - "type/release"
+      - "priority/high"
+      - "priority/low"
+      - "status/accepted"
+      - "status/blocked"
+      - "status/in-flight"
+      - "status/needs-design"
+      - "status/triaged"
       - "good first issue"
       - "help wanted"
       - "test/triage-validation"
@@ -407,9 +436,12 @@ safe-output tools. Required label-set hygiene per issue:
   `milestone_title` (e.g. "0.9.4"), not `milestone_number`.
 
 If the panel decides on a label that does not exist in APM's
-taxonomy (the `add-labels` allow-list), the safe-output handler will
-reject it. That is fine -- mention the missing label in your verdict
-comment so a maintainer can decide whether to create it.
+taxonomy (the `add-labels` allow-list, which is enumerated literally
+in the workflow frontmatter -- `allowed` does NOT support glob
+patterns in gh-aw v0.68.3, so every legal label is listed by exact
+name), the safe-output handler will silently drop it. Mention any
+such label in your verdict comment so a maintainer can decide
+whether to create it and add it to the allow-list.
 
 Do not edit the issue title or body. Do not close, reopen, lock,
 unlock, or assign the issue. Do not @-mention any specific contributor
