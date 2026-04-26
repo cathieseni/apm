@@ -1339,7 +1339,8 @@ class TestGatherDetectionEvidence:
         (tmp_path / "skills").mkdir()
         evidence = gather_detection_evidence(tmp_path)
         assert evidence.plugin_dirs_present == ("agents", "skills", "commands")
-        assert evidence.has_plugin_evidence is True
+        # Bare dirs without plugin.json or .claude-plugin/ are NOT plugin evidence.
+        assert evidence.has_plugin_evidence is False
 
     def test_obra_superpowers_evidence(self, tmp_path):
         """Evidence on the #780 repro should expose every signal the
