@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, List, Optional
 from ..models.results import InstallResult
 from ..utils.console import _rich_error
 from ..utils.diagnostics import DiagnosticCollector
+from ..utils.path_security import PathTraversalError
 from .errors import DirectDependencyError, PolicyViolationError
 
 if TYPE_CHECKING:
@@ -380,6 +381,10 @@ def run_install_pipeline(
     except DirectDependencyError:
         # #946: same pattern -- surface the message as-is instead of
         # double-wrapping it through the generic RuntimeError below.
+        raise
+    except PathTraversalError:
+        # Path-safety violation in SKILL_BUNDLE or other nested
+        # resolution -- surface as-is for actionable user guidance.
         raise
     except Exception as e:
         raise RuntimeError(f"Failed to resolve APM dependencies: {e}")
